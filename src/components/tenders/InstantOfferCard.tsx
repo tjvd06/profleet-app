@@ -209,6 +209,6 @@ export function InstantOfferCard({
           </div>
         </div>
       </Card>
-    </Link>
+    </a>
   );
 }
