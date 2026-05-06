@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Loader2, Building2, User } from "lucide-react";
+import { AlertCircle, Loader2, Building2, User, Sparkles } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -71,6 +71,20 @@ export default function RegisterPage() {
           </Link>
           <h1 className="text-2xl font-bold text-navy-950 text-center">Konto erstellen</h1>
           <p className="text-sm text-slate-500 text-center mt-1">Registrieren Sie sich kostenlos auf der Plattform.</p>
+        </div>
+
+        <div className="relative z-10 mb-6 rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-500/20">
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <h3 className="font-bold text-navy-950 mb-1">Pre-Launch — Vorregistrierung offen</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                proFleet startet im <span className="font-semibold text-navy-950">Herbst 2026</span>. Sie können sich jetzt schon vorregistrieren — wir schalten Ihr Konto rechtzeitig zum Launch frei und benachrichtigen Sie per E-Mail.
+              </p>
+            </div>
+          </div>
         </div>
 
         {error && (
