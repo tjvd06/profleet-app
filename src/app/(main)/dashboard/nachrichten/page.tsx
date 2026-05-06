@@ -22,6 +22,7 @@ import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { SITE_URL } from "@/lib/site";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 type Message = {
@@ -683,13 +684,13 @@ export default function MessagesPage() {
                               {activeContact.instantOffer.brand || "—"} {activeContact.instantOffer.model_name || ""}
                             </span>
                           </div>
-                          <Link
-                            href={`/sofort-angebote/${activeContact.instantOffer.id}`}
+                          <a
+                            href={`${SITE_URL}/sofort-angebote/${activeContact.instantOffer.id}`}
                             className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-semibold mt-2 transition-colors"
                           >
                             <ExternalLink size={13} />
                             Zum Sofort-Angebot
-                          </Link>
+                          </a>
                         </div>
                       )}
 

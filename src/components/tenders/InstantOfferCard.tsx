@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { type InstantOfferRow, buildSpecsString, getImageUrl, buildLocationString } from "@/lib/instant-offers";
+import { SITE_URL } from "@/lib/site";
 
 type ViewMode = "public" | "buyer" | "seller";
 
@@ -74,7 +75,7 @@ export function InstantOfferCard({
   };
 
   return (
-    <Link href={`/sofort-angebote/${offer.id}`}>
+    <a href={`${SITE_URL}/sofort-angebote/${offer.id}`}>
       <Card className="flex flex-col overflow-hidden rounded-3xl border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 group bg-white h-full relative">
         {/* Image Area */}
         <div className="relative h-48 sm:h-56 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden shrink-0">
