@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, Lock } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -69,6 +69,20 @@ export default function LoginPage() {
           </Link>
           <h1 className="text-2xl font-bold text-navy-950 text-center">Willkommen zurück</h1>
           <p className="text-sm text-slate-500 text-center mt-1">Geben Sie Ihre Zugangsdaten ein, um fortzufahren.</p>
+        </div>
+
+        <div className="relative z-10 mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
+              <Lock size={16} />
+            </div>
+            <div>
+              <h3 className="font-bold text-amber-900 mb-1 text-sm">Geschlossene Beta</h3>
+              <p className="text-sm text-amber-800/90 leading-relaxed">
+                Die Anmeldung ist aktuell nur für ausgewählte Testuser freigeschaltet. Wenn Sie sich vorregistriert haben, melden wir uns rechtzeitig zum Launch.
+              </p>
+            </div>
+          </div>
         </div>
 
         {error && (
