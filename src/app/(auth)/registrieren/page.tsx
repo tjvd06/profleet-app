@@ -47,16 +47,15 @@ export default function RegisterPage() {
     if (signUpError) {
       setError(signUpError.message);
       setLoading(false);
-    } else if (signUpData?.user && !signUpData?.session) {
-      // Email confirmation is required by Supabase settings
-      setError("Erfolgreich registriert! Bitte prüfen Sie Ihr E-Mail-Postfach und bestätigen Sie Ihre Adresse, bevor Sie sich einloggen.");
-      setLoading(false);
-      // Optional: Formular leeren
-      setPassword("");
-    } else {
-      router.push("/dashboard/profil?welcome=1");
-      router.refresh();
+      return;
     }
+
+    // Sign the user out immediately — accounts must be approved by an admin
+    // before they can use the platform.
+    await supabase.auth.signOut();
+    setError("Vielen Dank für Ihre Registrierung! Wir prüfen Ihre Angaben und schalten Ihr Konto manuell frei. Sie erhalten dann eine Bestätigung per E-Mail.");
+    setLoading(false);
+    setPassword("");
   };
 
   return (

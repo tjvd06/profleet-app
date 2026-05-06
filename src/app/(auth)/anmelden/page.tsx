@@ -25,7 +25,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -33,10 +33,26 @@ export default function LoginPage() {
     if (authError) {
       setError(authError.message);
       setLoading(false);
-    } else {
-      router.push("/dashboard");
-      router.refresh();
+      return;
     }
+
+    if (data?.user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_active")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      if (!profile?.is_active) {
+        await supabase.auth.signOut();
+        setError("Ihr Konto wurde noch nicht freigeschaltet. Wir prüfen Ihre Registrierung und benachrichtigen Sie per E-Mail, sobald Sie loslegen können.");
+        setLoading(false);
+        return;
+      }
+    }
+
+    router.push("/dashboard");
+    router.refresh();
   };
 
   return (
