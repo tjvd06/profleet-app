@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Menu, Search, Bell, User, LogOut, Settings, ChevronRight } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
+import { SITE_URL } from "@/lib/site";
 import { createClient } from "@/lib/supabase";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
@@ -59,7 +60,7 @@ export function DashboardTopBar({ onMobileMenuToggle }: { onMobileMenuToggle: ()
   const handleSignOut = async () => {
     try { await fetch("/api/auth/signout", { method: "POST" }); } catch {}
     await signOut();
-    window.location.href = "/";
+    window.location.href = SITE_URL || "/";
   };
 
   const breadcrumb = getBreadcrumb(pathname);
