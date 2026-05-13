@@ -21,13 +21,12 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
+import { DEALER_TYPES, DEALER_TYPE_LABELS } from "@/constants/enums";
 
-const DEALER_TYPES = [
-  { value: "vertragshaendler", label: "Vertragshändler" },
-  { value: "leasingfirma", label: "Leasingfirma" },
-  { value: "bank", label: "Bank" },
-  { value: "freier_haendler", label: "Freier Händler" },
-];
+const DEALER_TYPE_OPTIONS = DEALER_TYPES.map((value) => ({
+  value,
+  label: DEALER_TYPE_LABELS[value],
+}));
 
 const INDUSTRY_OPTIONS = [
   "Automobil",
@@ -49,13 +48,15 @@ type ProfileForm = {
   first_name: string;
   last_name: string;
   phone: string;
+  email_public: string;
   company_name: string;
   industry: string | null;
   street: string;
   zip: string;
   city: string;
   vat_id: string;
-  dealer_type: string | null;
+  // Stored as DealerType | null; "" represents "not selected" in the Select UI
+  dealer_type: string;
   brands: string[];
 };
 
@@ -93,6 +94,7 @@ export default function ProfilePage() {
     first_name: "",
     last_name: "",
     phone: "",
+    email_public: "",
     company_name: "",
     industry: "",
     street: "",
@@ -125,6 +127,7 @@ export default function ProfilePage() {
           first_name: p.first_name || "",
           last_name: p.last_name || "",
           phone: p.phone || "",
+          email_public: p.email_public || "",
           company_name: p.company_name || "",
           industry: p.industry || "",
           street: p.street || "",
@@ -297,12 +300,21 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     if (!user) return;
+
+    // Lightweight email-format guard for the optional public contact email
+    const trimmedEmail = form.email_public.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      toast.error("Bitte eine gültige E-Mail-Adresse für den öffentlichen Kontakt angeben.");
+      return;
+    }
+
     setSaving(true);
 
     const payload: Record<string, unknown> = {
       first_name: form.first_name || null,
       last_name: form.last_name || null,
       phone: form.phone || null,
+      email_public: trimmedEmail || null,
       company_name: form.company_name || null,
       industry: form.industry || null,
       street: form.street || null,
@@ -314,7 +326,14 @@ export default function ProfilePage() {
 
     if (isAnbieter) {
       payload.dealer_type = form.dealer_type || null;
-      payload.brands = form.brands.length > 0 ? form.brands : null;
+      // Drop any brand value that no longer exists in vehicle_models (typo or
+      // removed master-data entry); warn the user if anything was dropped.
+      const validBrands = form.brands.filter((b) => availableBrands.includes(b));
+      const droppedBrands = form.brands.filter((b) => !availableBrands.includes(b));
+      if (droppedBrands.length > 0) {
+        toast.warning(`Folgende Marken sind unbekannt und wurden entfernt: ${droppedBrands.join(", ")}`);
+      }
+      payload.brands = validBrands.length > 0 ? validBrands : null;
     }
 
     const { error } = await supabase
@@ -440,6 +459,21 @@ export default function ProfilePage() {
                 className={inputClass}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email_public">Öffentliche Kontakt-E-Mail (optional)</Label>
+              <Input
+                id="email_public"
+                type="email"
+                placeholder="kontakt@firma.de"
+                value={form.email_public}
+                onChange={(e) => update({ email_public: e.target.value })}
+                className={inputClass}
+              />
+              <p className="text-xs text-slate-400">
+                Wird Geschäftspartnern angezeigt, sobald ein Kontakt zustande kommt. Lass das Feld leer, wenn du nicht per E-Mail kontaktiert werden möchtest.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -534,12 +568,12 @@ export default function ProfilePage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="dealer_type">Händlertyp</Label>
-                  <Select value={form.dealer_type} onValueChange={(v) => update({ dealer_type: v })}>
+                  <Select value={form.dealer_type ?? ""} onValueChange={(v) => update({ dealer_type: v ?? "" })}>
                     <SelectTrigger id="dealer_type" className="h-12 bg-slate-50 border-slate-200 rounded-xl px-4">
                       <SelectValue placeholder="Händlertyp auswählen" />
                     </SelectTrigger>
                     <SelectContent>
-                      {DEALER_TYPES.map((dt) => (
+                      {DEALER_TYPE_OPTIONS.map((dt) => (
                         <SelectItem key={dt.value} value={dt.value}>{dt.label}</SelectItem>
                       ))}
                     </SelectContent>

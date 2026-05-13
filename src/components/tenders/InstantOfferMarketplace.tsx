@@ -42,6 +42,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { useSubscription } from "@/components/providers/subscription-provider";
 import { HeroSection } from "@/components/ui-custom/HeroSection";
 import { type InstantOfferRow } from "@/lib/instant-offers";
+import { psToKwFloor, psToKwCeil } from "@/lib/vehicle-units";
 import { EXTERIOR_COLOR_OPTIONS } from "@/lib/vehicle-options";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -576,12 +577,12 @@ export function InstantOfferMarketplace() {
         if (filters.awd === "yes") query = query.eq("awd", true);
         else if (filters.awd === "no") query = query.eq("awd", false);
 
-        // Power range
+        // Power range — UI is in PS, DB stores kW
         if (filters.powerMin > 50) {
-          query = query.gte("power_ps", filters.powerMin);
+          query = query.gte("power_kw", psToKwFloor(filters.powerMin));
         }
         if (filters.powerMax < 700) {
-          query = query.lte("power_ps", filters.powerMax);
+          query = query.lte("power_kw", psToKwCeil(filters.powerMax));
         }
 
         // Color
@@ -651,7 +652,7 @@ export function InstantOfferMarketplace() {
             });
             break;
           case "power_desc":
-            query = query.order("power_ps", {
+            query = query.order("power_kw", {
               ascending: false,
               nullsFirst: false,
             });

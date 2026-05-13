@@ -122,7 +122,6 @@ export default function NewTenderWizard() {
         fuel_type: v.fuelType,
         transmission: v.transmission,
         power_kw: v.powerFrom,
-        power_ps: v.powerFrom ? Math.round(v.powerFrom * 1.36) : null,
         awd: v.driveType === "Allrad",
         color: v.exteriorColor,
         metallic: v.metallic,

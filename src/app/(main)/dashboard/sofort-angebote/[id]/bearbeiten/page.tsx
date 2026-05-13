@@ -233,6 +233,30 @@ export default function EditInstantOfferPage() {
   };
 
   /* -------------------------------------------------------------- */
+  /* Withdraw — soft-retract a published offer                       */
+  /* -------------------------------------------------------------- */
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const handleWithdraw = async () => {
+    if (!user || !offerId) return;
+    if (!confirm("Sofort-Angebot wirklich zurückziehen? Es ist danach nicht mehr im Marktplatz sichtbar.")) return;
+    setIsWithdrawing(true);
+    setError(null);
+    try {
+      const { error: updateError } = await supabase
+        .from("instant_offers")
+        .update({ status: "withdrawn" })
+        .eq("id", offerId);
+      if (updateError) throw updateError;
+      router.push("/dashboard/sofort-angebote");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Zurückziehen fehlgeschlagen.";
+      setError(message);
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
+
+  /* -------------------------------------------------------------- */
   /* Save (UPDATE)                                                   */
   /* -------------------------------------------------------------- */
   const handleSave = async () => {
@@ -260,7 +284,6 @@ export default function EditInstantOfferPage() {
         fuel_type: vehicle.fuelType,
         transmission: vehicle.transmission,
         power_kw: vehicle.powerFrom,
-        power_ps: vehicle.powerFrom ? Math.round(vehicle.powerFrom * 1.36) : null,
         awd: vehicle.driveType === "Allrad",
         color: vehicle.exteriorColor,
         metallic: vehicle.metallic,
@@ -300,7 +323,6 @@ export default function EditInstantOfferPage() {
         // Additional costs
         transfer_cost: transfer || null,
         registration_cost: registration || null,
-        total_price: totalPrice || null,
 
         // Duration
         duration_days: duration,
@@ -831,17 +853,33 @@ export default function EditInstantOfferPage() {
           >
             Abbrechen
           </Button>
-          <Button
-            className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:opacity-90 text-white shadow-lg shadow-blue-500/20 px-10 h-14 text-lg font-bold transition-transform hover:scale-105 disabled:opacity-40"
-            onClick={handleSave}
-            disabled={!isValid || isSaving}
-          >
-            {isSaving ? (
-              <><Loader2 className="animate-spin mr-2" size={18} /> Wird gespeichert...</>
-            ) : (
-              "Änderungen speichern"
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            {existingOffer?.status === "active" && (
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto rounded-xl border-red-200 text-red-600 hover:bg-red-50 h-14 px-6 font-semibold"
+                onClick={handleWithdraw}
+                disabled={isWithdrawing || isSaving}
+              >
+                {isWithdrawing ? (
+                  <><Loader2 className="animate-spin mr-2" size={18} /> Wird zurückgezogen...</>
+                ) : (
+                  "Zurückziehen"
+                )}
+              </Button>
             )}
-          </Button>
+            <Button
+              className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:opacity-90 text-white shadow-lg shadow-blue-500/20 px-10 h-14 text-lg font-bold transition-transform hover:scale-105 disabled:opacity-40"
+              onClick={handleSave}
+              disabled={!isValid || isSaving || isWithdrawing}
+            >
+              {isSaving ? (
+                <><Loader2 className="animate-spin mr-2" size={18} /> Wird gespeichert...</>
+              ) : (
+                "Änderungen speichern"
+              )}
+            </Button>
+          </div>
         </div>
 
       </div>

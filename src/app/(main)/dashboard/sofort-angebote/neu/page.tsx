@@ -152,7 +152,6 @@ export default function CreateInstantOfferPage() {
         fuel_type: vehicle.fuelType,
         transmission: vehicle.transmission,
         power_kw: vehicle.powerFrom,
-        power_ps: vehicle.powerFrom ? Math.round(vehicle.powerFrom * 1.36) : null,
         awd: vehicle.driveType === "Allrad",
         color: vehicle.exteriorColor,
         metallic: vehicle.metallic,
@@ -192,7 +191,6 @@ export default function CreateInstantOfferPage() {
         // Additional costs
         transfer_cost: transfer || null,
         registration_cost: registration || null,
-        total_price: totalPrice || null,
 
         // Duration
         duration_days: duration,

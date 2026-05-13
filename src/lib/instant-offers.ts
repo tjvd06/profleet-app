@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase";
+import { kwToPs } from "@/lib/vehicle-units";
 
 // ─── DB row type ────────────────────────────────────────────────────────────
 export interface InstantOfferRow {
@@ -12,7 +13,6 @@ export interface InstantOfferRow {
   fuel_type: string | null;
   transmission: string | null;
   power_kw: number | null;
-  power_ps: number | null;
   awd: boolean;
   color: string | null;
   metallic: boolean;
@@ -50,8 +50,7 @@ export interface InstantOfferRow {
 export function buildSpecsString(row: InstantOfferRow): string {
   const parts: string[] = [];
   if (row.power_kw) {
-    const ps = row.power_ps || Math.round(row.power_kw * 1.36);
-    parts.push(`${row.power_kw} kW (${ps} PS)`);
+    parts.push(`${row.power_kw} kW (${kwToPs(row.power_kw)} PS)`);
   }
   if (row.transmission) parts.push(row.transmission);
   if (row.fuel_type) parts.push(row.fuel_type);
@@ -77,8 +76,7 @@ export function buildEquipmentDetails(row: InstantOfferRow): EquipmentDetail[] {
   if (row.body_type) details.push({ label: "Karosserie", value: row.body_type });
   if (row.fuel_type) details.push({ label: "Kraftstoff", value: row.fuel_type });
   if (row.power_kw) {
-    const ps = row.power_ps || Math.round(row.power_kw * 1.36);
-    details.push({ label: "Leistung", value: `${row.power_kw} kW (${ps} PS)` });
+    details.push({ label: "Leistung", value: `${row.power_kw} kW (${kwToPs(row.power_kw)} PS)` });
   }
   if (row.transmission) details.push({ label: "Getriebe", value: row.transmission });
   if (row.awd) details.push({ label: "Antrieb", value: "Allrad" });

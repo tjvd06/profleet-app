@@ -4,10 +4,11 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import type { UserRole } from "@/constants/enums";
 
 type Profile = {
   id: string;
-  role: "nachfrager" | "anbieter";
+  role: UserRole;
   company_name: string | null;
   first_name: string | null;
   last_name: string | null;

@@ -45,7 +45,7 @@ type Offer = {
   tender_vehicle_id: string | null;
   total_price: number | null;
   purchase_price: number | null;
-  lease_rate: number | null;
+  leasing_rate_net: number | null;
   transfer_cost: number | null;
   registration_cost: number | null;
   offered_quantity: number | null;
@@ -76,8 +76,10 @@ type Offer = {
 
 type Contact = {
   id: string;
-  tender_id: string;
-  offer_id: string;
+  // Two link paths: (tender_id + offer_id) OR (instant_offer_id)
+  tender_id: string | null;
+  offer_id: string | null;
+  instant_offer_id: string | null;
   buyer_id: string;
   dealer_id: string;
   status: string;
@@ -282,10 +284,10 @@ function OfferRow({ offer, offerIdx, isMultiVehicle, vehicleLabel, vehicle, d, h
             <div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Leasing</div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
-                {offer.lease_rate && (
+                {offer.leasing_rate_net && (
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-500">Rate / Monat netto</span>
-                    <span className="font-semibold text-navy-950">{offer.lease_rate.toLocaleString("de-DE")} €</span>
+                    <span className="font-semibold text-navy-950">{offer.leasing_rate_net.toLocaleString("de-DE")} €</span>
                   </div>
                 )}
                 {d?.leasingDuration && (
@@ -587,8 +589,11 @@ export default function MyTendersPage() {
   const handleSubmitReview = async (contactId: string, type: "positive" | "neutral" | "negative", contractConcluded: boolean, comment: string) => {
     const contact = contacts.find(c => c.id === contactId);
     if (!contact || !user) return;
+    const linkFields = contact.instant_offer_id
+      ? { instant_offer_id: contact.instant_offer_id, tender_id: null }
+      : { tender_id: contact.tender_id, instant_offer_id: null };
     const { data, error } = await supabase.from("reviews").insert({
-      tender_id: contact.tender_id,
+      ...linkFields,
       contact_id: contactId,
       from_user_id: user.id,
       to_user_id: contact.dealer_id,
@@ -756,7 +761,7 @@ export default function MyTendersPage() {
                 const d = offer.offer_details;
                 const vehicleLabel = vehicle ? `${(vehicle as any).brand || ""} ${(vehicle as any).model_name || ""}`.trim() : "";
 
-                const hasLeasing = !!(offer.lease_rate);
+                const hasLeasing = !!(offer.leasing_rate_net);
                 const hasFinancing = !!(d?.financingRate);
                 const hasCosts = !!((offer.transfer_cost && offer.transfer_cost > 0) || (offer.registration_cost && offer.registration_cost > 0));
                 const hasDelivery = !!(offer.delivery_plz || offer.delivery_city || offer.delivery_date);

@@ -3,12 +3,14 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "./auth-provider";
+import type { SubscriptionTier } from "@/constants/enums";
 
-export type SubscriptionTier = "starter" | "pro" | "premium";
+export type { SubscriptionTier };
 
 type SubscriptionContextType = {
   tier: SubscriptionTier;
   subscriptionSince: string | null;
+  subscriptionUntil: string | null;
   monthlyOfferCount: number;
   activeInstantOfferCount: number;
   canCreateOffer: () => boolean;
@@ -34,6 +36,7 @@ const INSTANT_OFFER_LIMITS: Record<SubscriptionTier, number | null> = {
 const SubscriptionContext = createContext<SubscriptionContextType>({
   tier: "starter",
   subscriptionSince: null,
+  subscriptionUntil: null,
   monthlyOfferCount: 0,
   activeInstantOfferCount: 0,
   canCreateOffer: () => true,
@@ -49,6 +52,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [supabase] = useState(() => createClient());
   const [tier, setTier] = useState<SubscriptionTier>("starter");
   const [subscriptionSince, setSubscriptionSince] = useState<string | null>(null);
+  const [subscriptionUntil, setSubscriptionUntil] = useState<string | null>(null);
   const [monthlyOfferCount, setMonthlyOfferCount] = useState(0);
   const [activeInstantOfferCount, setActiveInstantOfferCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,13 +69,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       // Fetch subscription tier from profile
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("subscription_tier, subscription_since")
+        .select("subscription_tier, subscription_since, subscription_until")
         .eq("id", user.id)
         .single();
 
       if (profileData) {
         setTier((profileData.subscription_tier as SubscriptionTier) || "starter");
         setSubscriptionSince(profileData.subscription_since || null);
+        setSubscriptionUntil(profileData.subscription_until || null);
       }
 
       // Count offers this month
@@ -127,6 +132,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       value={{
         tier,
         subscriptionSince,
+        subscriptionUntil,
         monthlyOfferCount,
         activeInstantOfferCount,
         canCreateOffer,
