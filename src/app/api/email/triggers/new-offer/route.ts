@@ -1,10 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { NewOfferEmail } from '@/emails/NewOfferEmail';
+import { logEmail } from '@/lib/email/log';
 import { sendEmail } from '@/lib/email/send';
+import { isRecipientReachable, isThrottled } from '@/lib/email/throttle';
 import { verifyWebhookSecret } from '@/lib/email/webhook-auth';
 
 export const runtime = 'nodejs';
+
+const TEMPLATE = 'new-offer';
+const THROTTLE_WINDOW_MINUTES = 15;
 
 type OfferRow = {
   id: string;
@@ -62,7 +67,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ skipped: 'not an offers event' }, { status: 200 });
   }
 
-  // Fire only when offer becomes (or is created as) active.
   const becameActive =
     payload.type === 'INSERT'
       ? payload.record.status === 'active'
@@ -92,18 +96,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Tender not found' }, { status: 404 });
   }
 
+  const buyerId = tender.buyer_id;
+
+  if (!(await isRecipientReachable(buyerId))) {
+    return NextResponse.json(
+      { skipped: 'buyer opted out or address not deliverable' },
+      { status: 200 },
+    );
+  }
+
+  if (
+    await isThrottled({
+      userId: buyerId,
+      template: TEMPLATE,
+      windowMinutes: THROTTLE_WINDOW_MINUTES,
+      metaMatch: { tender_id: tender.id },
+    })
+  ) {
+    return NextResponse.json(
+      { skipped: 'throttled — recent offer mail for this tender' },
+      { status: 200 },
+    );
+  }
+
   const [buyerProfileRes, dealerProfileRes, buyerUserRes, vehicleRes] = await Promise.all([
     admin
       .from('profiles')
       .select('first_name, last_name, company_name, role')
-      .eq('id', tender.buyer_id)
+      .eq('id', buyerId)
       .single(),
     admin
       .from('profiles')
       .select('first_name, last_name, company_name')
       .eq('id', offer.dealer_id)
       .single(),
-    admin.auth.admin.getUserById(tender.buyer_id),
+    admin.auth.admin.getUserById(buyerId),
     offer.tender_vehicle_id
       ? admin
           .from('tender_vehicles')
@@ -117,7 +144,7 @@ export async function POST(request: Request) {
     console.error(
       '[email/triggers/new-offer] buyer user lookup failed:',
       buyerUserRes.error,
-      tender.buyer_id,
+      buyerId,
     );
     return NextResponse.json(
       { error: 'Buyer not found or has no email' },
@@ -125,7 +152,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // Phase G later adds notification_settings opt-out; for now: send to all nachfrager.
   if (buyerProfileRes.data?.role && buyerProfileRes.data.role !== 'nachfrager') {
     return NextResponse.json(
       { skipped: 'buyer is not nachfrager' },
@@ -145,10 +171,9 @@ export async function POST(request: Request) {
 
   const totalPriceFormatted = formatPriceEUR(offer.total_price);
 
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.profleet.de').replace(
-    /\/$/,
-    '',
-  );
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.profleet.de'
+  ).replace(/\/$/, '');
   const offerUrl = `${siteUrl}/dashboard/eingang/${tender.id}/angebot`;
 
   const result = await sendEmail({
@@ -169,6 +194,14 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  await logEmail({
+    userId: buyerId,
+    template: TEMPLATE,
+    resendMessageId: result.id,
+    status: 'sent',
+    meta: { tender_id: tender.id, offer_id: offer.id, dealer_id: offer.dealer_id },
+  });
 
   return NextResponse.json(
     { sent: true, messageId: result.id, to: buyerEmail },

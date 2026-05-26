@@ -1,10 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { NewMessageEmail } from '@/emails/NewMessageEmail';
+import { logEmail } from '@/lib/email/log';
 import { sendEmail } from '@/lib/email/send';
+import { isRecipientReachable, isThrottled } from '@/lib/email/throttle';
 import { verifyWebhookSecret } from '@/lib/email/webhook-auth';
 
 export const runtime = 'nodejs';
+
+const TEMPLATE = 'new-message';
+const THROTTLE_WINDOW_MINUTES = 60;
+const PREVIEW_MAX_CHARS = 200;
 
 type MessageRow = {
   id: string;
@@ -20,8 +26,6 @@ type SupabaseWebhookPayload = {
   record: MessageRow | null;
   old_record: MessageRow | null;
 };
-
-const PREVIEW_MAX_CHARS = 200;
 
 function truncate(text: string, max: number) {
   const trimmed = text.trim();
@@ -81,7 +85,31 @@ export async function POST(request: Request) {
     message.sender_id === contact.buyer_id ? contact.dealer_id : contact.buyer_id;
 
   if (recipientId === message.sender_id) {
-    return NextResponse.json({ skipped: 'sender and recipient identical' }, { status: 200 });
+    return NextResponse.json(
+      { skipped: 'sender and recipient identical' },
+      { status: 200 },
+    );
+  }
+
+  if (!(await isRecipientReachable(recipientId))) {
+    return NextResponse.json(
+      { skipped: 'recipient opted out or address not deliverable' },
+      { status: 200 },
+    );
+  }
+
+  if (
+    await isThrottled({
+      userId: recipientId,
+      template: TEMPLATE,
+      windowMinutes: THROTTLE_WINDOW_MINUTES,
+      metaMatch: { contact_id: contact.id },
+    })
+  ) {
+    return NextResponse.json(
+      { skipped: 'throttled — recent send for this conversation' },
+      { status: 200 },
+    );
   }
 
   const [recipientProfileRes, senderProfileRes, recipientUserRes] = await Promise.all([
@@ -116,10 +144,9 @@ export async function POST(request: Request) {
     ? displayName(senderProfileRes.data)
     : 'Ein Nutzer von proFleet';
 
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.profleet.de').replace(
-    /\/$/,
-    '',
-  );
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.profleet.de'
+  ).replace(/\/$/, '');
   const conversationUrl = `${siteUrl}/dashboard/nachrichten?contact=${contact.id}`;
   const messagePreview = truncate(message.content, PREVIEW_MAX_CHARS);
 
@@ -140,6 +167,14 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  await logEmail({
+    userId: recipientId,
+    template: TEMPLATE,
+    resendMessageId: result.id,
+    status: 'sent',
+    meta: { contact_id: contact.id, sender_id: message.sender_id },
+  });
 
   return NextResponse.json(
     { sent: true, messageId: result.id, to: recipientEmail },

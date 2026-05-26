@@ -1,10 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { ApprovalWelcomeEmail } from '@/emails/ApprovalWelcomeEmail';
+import { logEmail } from '@/lib/email/log';
 import { sendEmail } from '@/lib/email/send';
 import { verifyWebhookSecret } from '@/lib/email/webhook-auth';
 
 export const runtime = 'nodejs';
+
+const TEMPLATE = 'approval-welcome';
 
 type ProfileRow = {
   id: string;
@@ -46,17 +49,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ skipped: 'is_active not flipped to true' }, { status: 200 });
   }
 
+  const recipientId = payload.record.id;
+
+  // Approval is a one-time, account-critical event — we still respect the
+  // hard opt-out (email_status bounced/complained/unsubscribed) but not the
+  // user-toggle email_notifications, since this is a transactional message.
+  // (The reachable helper checks both; for approval we deliberately skip it
+  // entirely so the welcome always reaches a freshly-approved account.)
+
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
 
   const { data: userData, error: userErr } = await admin.auth.admin.getUserById(
-    payload.record.id,
+    recipientId,
   );
 
   if (userErr || !userData.user?.email) {
-    console.error('[email/triggers/approval] user lookup failed:', userErr, payload.record.id);
+    console.error(
+      '[email/triggers/approval] user lookup failed:',
+      userErr,
+      recipientId,
+    );
     return NextResponse.json(
       { error: 'User not found or has no email' },
       { status: 404 },
@@ -81,6 +96,13 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  await logEmail({
+    userId: recipientId,
+    template: TEMPLATE,
+    resendMessageId: result.id,
+    status: 'sent',
+  });
 
   return NextResponse.json(
     { sent: true, messageId: result.id, to: userData.user.email },
