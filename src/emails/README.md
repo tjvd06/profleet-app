@@ -86,10 +86,14 @@ const { id, error } = await sendEmail({
 
 ## Roadmap
 
-Geplante zusätzliche Templates (siehe [email-integration.md](../../email-integration.md)):
+Live (siehe [email-integration.md](../../email-integration.md)):
 
+- **ApprovalWelcomeEmail.tsx** (Phase D) — "Ihr Konto ist freigeschaltet"
 - **NewMessageEmail.tsx** (Phase E) — "Neue Nachricht von …"
 - **NewOfferEmail.tsx** (Phase E) — "Neues Angebot auf Ihre Ausschreibung"
+
+Geplant:
+
 - **NewTenderMatchingEmail.tsx** (Phase G) — "Neue Ausschreibung für Ihre Marken"
 - **ReviewReceivedEmail.tsx** (Phase F+) — "Sie haben eine Bewertung erhalten"
 - **SubscriptionWelcomeEmail.tsx** (Stripe-Phase) — "Willkommen bei proFleet Pro"
