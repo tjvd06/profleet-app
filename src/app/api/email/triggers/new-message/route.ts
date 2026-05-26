@@ -2,8 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { NewMessageEmail } from '@/emails/NewMessageEmail';
 import { logEmail } from '@/lib/email/log';
+import { shouldSendNotification } from '@/lib/email/preferences';
 import { sendEmail } from '@/lib/email/send';
-import { isRecipientReachable, isThrottled } from '@/lib/email/throttle';
+import { isThrottled } from '@/lib/email/throttle';
+import { signUnsubscribeToken } from '@/lib/email/token';
 import { verifyWebhookSecret } from '@/lib/email/webhook-auth';
 
 export const runtime = 'nodejs';
@@ -91,7 +93,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!(await isRecipientReachable(recipientId))) {
+  if (!(await shouldSendNotification(recipientId, 'new_message'))) {
     return NextResponse.json(
       { skipped: 'recipient opted out or address not deliverable' },
       { status: 200 },
@@ -150,6 +152,12 @@ export async function POST(request: Request) {
   const conversationUrl = `${siteUrl}/dashboard/nachrichten?contact=${contact.id}`;
   const messagePreview = truncate(message.content, PREVIEW_MAX_CHARS);
 
+  const unsubscribeToken = await signUnsubscribeToken({
+    userId: recipientId,
+    type: 'new_message',
+  });
+  const unsubscribeUrl = `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
+
   const result = await sendEmail({
     to: recipientEmail,
     subject: `Neue Nachricht von ${senderName} auf proFleet`,
@@ -158,6 +166,7 @@ export async function POST(request: Request) {
       senderName,
       messagePreview,
       conversationUrl,
+      unsubscribeUrl,
     }),
   });
 

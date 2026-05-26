@@ -7,6 +7,7 @@ type NewMessageEmailProps = {
   senderName: string;
   messagePreview: string;
   conversationUrl: string;
+  unsubscribeUrl?: string;
 };
 
 export function NewMessageEmail({
@@ -14,11 +15,15 @@ export function NewMessageEmail({
   senderName,
   messagePreview,
   conversationUrl,
+  unsubscribeUrl,
 }: NewMessageEmailProps) {
   const greeting = recipientFirstName ? `Hallo ${recipientFirstName},` : 'Hallo,';
 
   return (
-    <EmailLayout preview={`Neue Nachricht von ${senderName} auf proFleet`}>
+    <EmailLayout
+      preview={`Neue Nachricht von ${senderName} auf proFleet`}
+      unsubscribeUrl={unsubscribeUrl}
+    >
       <Heading style={headingStyle}>Sie haben eine neue Nachricht</Heading>
 
       <Text style={paragraphStyle}>{greeting}</Text>

@@ -8,6 +8,7 @@ type NewOfferEmailProps = {
   vehicleLabel?: string | null;
   totalPriceFormatted?: string | null;
   offerUrl: string;
+  unsubscribeUrl?: string;
 };
 
 export function NewOfferEmail({
@@ -16,11 +17,15 @@ export function NewOfferEmail({
   vehicleLabel,
   totalPriceFormatted,
   offerUrl,
+  unsubscribeUrl,
 }: NewOfferEmailProps) {
   const greeting = recipientFirstName ? `Hallo ${recipientFirstName},` : 'Hallo,';
 
   return (
-    <EmailLayout preview={`Neues Angebot von ${dealerName} auf Ihre Ausschreibung`}>
+    <EmailLayout
+      preview={`Neues Angebot von ${dealerName} auf Ihre Ausschreibung`}
+      unsubscribeUrl={unsubscribeUrl}
+    >
       <Heading style={headingStyle}>Neues Angebot auf Ihre Ausschreibung</Heading>
 
       <Text style={paragraphStyle}>{greeting}</Text>

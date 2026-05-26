@@ -2,8 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { NewOfferEmail } from '@/emails/NewOfferEmail';
 import { logEmail } from '@/lib/email/log';
+import { shouldSendNotification } from '@/lib/email/preferences';
 import { sendEmail } from '@/lib/email/send';
-import { isRecipientReachable, isThrottled } from '@/lib/email/throttle';
+import { isThrottled } from '@/lib/email/throttle';
+import { signUnsubscribeToken } from '@/lib/email/token';
 import { verifyWebhookSecret } from '@/lib/email/webhook-auth';
 
 export const runtime = 'nodejs';
@@ -98,7 +100,7 @@ export async function POST(request: Request) {
 
   const buyerId = tender.buyer_id;
 
-  if (!(await isRecipientReachable(buyerId))) {
+  if (!(await shouldSendNotification(buyerId, 'new_offer'))) {
     return NextResponse.json(
       { skipped: 'buyer opted out or address not deliverable' },
       { status: 200 },
@@ -176,6 +178,12 @@ export async function POST(request: Request) {
   ).replace(/\/$/, '');
   const offerUrl = `${siteUrl}/dashboard/eingang/${tender.id}/angebot`;
 
+  const unsubscribeToken = await signUnsubscribeToken({
+    userId: buyerId,
+    type: 'new_offer',
+  });
+  const unsubscribeUrl = `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
+
   const result = await sendEmail({
     to: buyerEmail,
     subject: 'Neues Angebot auf Ihre Ausschreibung',
@@ -185,6 +193,7 @@ export async function POST(request: Request) {
       vehicleLabel,
       totalPriceFormatted,
       offerUrl,
+      unsubscribeUrl,
     }),
   });
 

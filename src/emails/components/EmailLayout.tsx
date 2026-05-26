@@ -31,9 +31,10 @@ export const EMAIL_FONT_STACK =
 type EmailLayoutProps = {
   preview: string;
   children: ReactNode;
+  unsubscribeUrl?: string;
 };
 
-export function EmailLayout({ preview, children }: EmailLayoutProps) {
+export function EmailLayout({ preview, children, unsubscribeUrl }: EmailLayoutProps) {
   return (
     <Html lang="de">
       <Head />
@@ -63,6 +64,15 @@ export function EmailLayout({ preview, children }: EmailLayoutProps) {
               </Link>
               ), wenn Sie Fragen haben.
             </Text>
+            {unsubscribeUrl && (
+              <Text style={footerReplyStyle}>
+                Diese Art von Benachrichtigung nicht mehr erhalten?{' '}
+                <Link href={unsubscribeUrl} style={footerLinkInlineStyle}>
+                  Mit einem Klick abmelden
+                </Link>
+                .
+              </Text>
+            )}
             <Hr style={footerHrStyle} />
             <Text style={footerImprintStyle}>
               proFleet GmbH · Hartstraße 23 · 82110 München · Tel. +49 89 306365-10
