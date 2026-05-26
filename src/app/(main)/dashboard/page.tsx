@@ -15,7 +15,6 @@ import { createClient } from "@/lib/supabase";
 import { DealerTenderCard } from "@/components/tenders/DealerTenderCard";
 import { InstantOfferCard } from "@/components/tenders/InstantOfferCard";
 import { type InstantOfferRow } from "@/lib/instant-offers";
-import { SITE_URL } from "@/lib/site";
 
 // ─── Activity item type ──────────────────────────────────────────────────────
 type ActivityItem = {
@@ -684,7 +683,7 @@ export default function DashboardOverviewPage() {
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <h2 className="text-base font-semibold text-navy-950">Neue Sofort-Angebote</h2>
-                      <a href={`${SITE_URL}/sofort-angebote`} className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                      <a href="/dashboard/sofort-angebote" className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
                         Alle ansehen <ArrowRight size={12} />
                       </a>
                     </div>

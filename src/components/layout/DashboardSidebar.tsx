@@ -11,7 +11,7 @@ import {
 import { Logo } from "@/components/ui/Logo";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/components/providers/auth-provider";
-import { SITE_URL } from "@/lib/site";
+import { MARKETING_URL } from "@/lib/site";
 
 type NavItem = {
   label: string;
@@ -147,7 +147,7 @@ export function DashboardSidebar({
   const handleSignOut = async () => {
     try { await fetch("/api/auth/signout", { method: "POST" }); } catch {}
     await signOut();
-    window.location.href = SITE_URL || "/";
+    window.location.href = MARKETING_URL;
   };
 
   const sidebarWidth = collapsed ? "w-[70px]" : "w-[260px]";

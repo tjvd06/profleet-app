@@ -14,7 +14,6 @@ import {
   MapPin, Euro, Clock, Truck, FileText, Trash2, UploadCloud,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
-import { SITE_URL } from "@/lib/site";
 import { useAuth } from "@/components/providers/auth-provider";
 import { VehicleConfigForm } from "@/components/wizard/VehicleConfigForm";
 import { ImageUpload, type ImageItem } from "@/components/ui-custom/ImageUpload";
@@ -395,7 +394,7 @@ export default function EditInstantOfferPage() {
           </Button>
           <Button
             className="rounded-xl bg-navy-900 hover:bg-navy-950 text-white h-14 px-8 text-lg font-semibold shadow-lg"
-            onClick={() => { window.location.href = `${SITE_URL}/sofort-angebote/${offerId}`; }}
+            onClick={() => router.push(`/dashboard/sofort-angebote/${offerId}`)}
           >
             Angebot ansehen
           </Button>
