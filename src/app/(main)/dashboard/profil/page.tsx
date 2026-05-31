@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -16,7 +15,7 @@ import {
 import {
   Loader2, Save, User, Building2, X, PartyPopper,
   Inbox, MessageCircle, Star, FileText, Zap, InboxIcon, Activity,
-  Bell, ChevronRight, Tag, Search,
+  Bell, ChevronRight, Tag,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
@@ -642,50 +641,62 @@ export default function ProfilePage() {
 
                 <div className="space-y-2">
                   <div className="flex items-baseline justify-between">
-                    <Label>Vertretene Marken</Label>
+                    <Label htmlFor="brand-input">Vertretene Marken</Label>
                     <span className="text-xs text-slate-400">
                       {form.brands.length} ausgewählt
                     </span>
                   </div>
 
-                  {form.brands.length > 0 && (
-                    <div className="flex flex-wrap gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div className="relative">
+                    <label
+                      htmlFor="brand-input"
+                      className="flex flex-wrap items-center gap-2 min-h-12 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl cursor-text transition-colors focus-within:bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100"
+                    >
                       {form.brands.map((brand) => (
-                        <Badge
+                        <span
                           key={brand}
-                          className="bg-white text-navy-950 border border-slate-200 px-3 py-1.5 text-sm font-medium flex items-center gap-1.5 shadow-sm hover:border-blue-300 transition-colors"
+                          className="inline-flex items-center gap-1 bg-blue-600 text-white pl-3 pr-1 py-1 rounded-full text-sm font-medium shadow-sm"
                         >
                           {brand}
                           <button
                             type="button"
-                            onClick={() => removeBrand(brand)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              removeBrand(brand);
+                            }}
                             aria-label={`${brand} entfernen`}
-                            className="text-slate-400 hover:text-red-500 transition-colors"
+                            className="w-5 h-5 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center transition-colors"
                           >
-                            <X size={14} />
+                            <X size={12} />
                           </button>
-                        </Badge>
+                        </span>
                       ))}
-                    </div>
-                  )}
-
-                  <div className="relative">
-                    <Search
-                      size={16}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                    />
-                    <Input
-                      placeholder="Marke suchen und hinzufügen…"
-                      value={brandInput}
-                      onChange={(e) => setBrandInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          if (filteredBrands.length > 0) addBrand(filteredBrands[0]);
+                      <input
+                        id="brand-input"
+                        type="text"
+                        placeholder={
+                          form.brands.length === 0
+                            ? "Marke suchen und hinzufügen…"
+                            : "Weitere Marke…"
                         }
-                      }}
-                      className={`${inputClass} pl-11`}
-                    />
+                        value={brandInput}
+                        onChange={(e) => setBrandInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            if (filteredBrands.length > 0) addBrand(filteredBrands[0]);
+                          } else if (
+                            e.key === "Backspace" &&
+                            brandInput === "" &&
+                            form.brands.length > 0
+                          ) {
+                            e.preventDefault();
+                            removeBrand(form.brands[form.brands.length - 1]);
+                          }
+                        }}
+                        className="flex-1 min-w-[140px] bg-transparent outline-none border-0 text-sm placeholder:text-slate-400 py-1"
+                      />
+                    </label>
                     {brandInput && (
                       <div className="absolute z-30 top-full mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto">
                         {filteredBrands.length > 0 ? (
