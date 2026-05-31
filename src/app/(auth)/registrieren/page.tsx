@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Loader2, Building2, User, Sparkles } from "lucide-react";
+import { AlertCircle, Loader2, Building2, User, Sparkles, Eye, EyeOff } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -20,6 +20,7 @@ export default function RegisterPage() {
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -141,7 +142,24 @@ export default function RegisterPage() {
           
           <div className="space-y-2">
             <Label htmlFor="password">Passwort</Label>
-            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 bg-slate-50 border-slate-200 rounded-xl px-4 focus:bg-white" />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-12 bg-slate-50 border-slate-200 rounded-xl px-4 pr-12 focus:bg-white"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <Button type="submit" className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg shadow-blue-600/20 mt-6" disabled={loading}>
