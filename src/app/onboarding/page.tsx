@@ -455,35 +455,27 @@ function GlassShell({
 function Stepper({ step }: { step: number }) {
   return (
     <div className="px-8 md:px-12 pt-8 md:pt-10 pb-6">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-3">
         {STEPS.map((label, idx) => {
           const isActive = idx === step;
           const isDone = idx < step;
           return (
-            <div key={label} className="flex-1 flex items-center gap-2">
-              <div className="flex flex-col items-start gap-1.5 flex-1 min-w-0">
-                <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      isDone || isActive
-                        ? "bg-gradient-to-r from-blue-400 to-cyan-300"
-                        : "bg-transparent"
-                    }`}
-                    style={{ width: isDone || isActive ? "100%" : "0%" }}
-                  />
-                </div>
-                <span
-                  className={`text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                    isActive
-                      ? "text-white"
-                      : isDone
-                        ? "text-white/70"
-                        : "text-white/30"
-                  }`}
-                >
+            <div key={label} className="flex items-center gap-2">
+              <div
+                className={`rounded-full transition-all duration-500 ${
+                  isActive
+                    ? "h-2.5 w-2.5 bg-gradient-to-r from-blue-400 to-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.6)] scale-110"
+                    : isDone
+                      ? "h-2 w-2 bg-white/70"
+                      : "h-2 w-2 bg-white/20"
+                }`}
+                aria-label={`Schritt ${idx + 1} ${isActive ? "(aktiv)" : isDone ? "(abgeschlossen)" : ""}`}
+              />
+              {isActive && (
+                <span className="text-[11px] font-bold uppercase tracking-wider text-white">
                   {label}
                 </span>
-              </div>
+              )}
             </div>
           );
         })}
