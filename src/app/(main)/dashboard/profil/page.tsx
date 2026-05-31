@@ -117,9 +117,10 @@ export default function ProfilePage() {
     if (authLoading || !user) return;
 
     (async () => {
-      const [profileResult, brandsResult] = await Promise.all([
+      const [profileResult, brandsResult, dealerBrandsResult] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).single(),
         supabase.from("vehicle_models").select("brand"),
+        supabase.from("dealer_brands").select("brand").eq("dealer_id", user.id),
       ]);
 
       if (profileResult.data) {
@@ -136,7 +137,7 @@ export default function ProfilePage() {
           city: p.city || "",
           vat_id: p.vat_id || "",
           dealer_type: p.dealer_type || "",
-          brands: p.brands || [],
+          brands: dealerBrandsResult.data?.map((r: any) => r.brand) ?? [],
         });
       }
 
@@ -327,6 +328,20 @@ export default function ProfilePage() {
 
     if (isAnbieter) {
       payload.dealer_type = form.dealer_type || null;
+    }
+
+    const { error: profileErr } = await supabase
+      .from("profiles")
+      .update(payload)
+      .eq("id", user.id);
+
+    if (profileErr) {
+      setSaving(false);
+      toast.error("Fehler beim Speichern: " + profileErr.message);
+      return;
+    }
+
+    if (isAnbieter) {
       // Drop any brand value that no longer exists in vehicle_models (typo or
       // removed master-data entry); warn the user if anything was dropped.
       const validBrands = form.brands.filter((b) => availableBrands.includes(b));
@@ -334,21 +349,31 @@ export default function ProfilePage() {
       if (droppedBrands.length > 0) {
         toast.warning(`Folgende Marken sind unbekannt und wurden entfernt: ${droppedBrands.join(", ")}`);
       }
-      payload.brands = validBrands.length > 0 ? validBrands : null;
-    }
 
-    const { error } = await supabase
-      .from("profiles")
-      .update(payload)
-      .eq("id", user.id);
+      const { error: delErr } = await supabase
+        .from("dealer_brands")
+        .delete()
+        .eq("dealer_id", user.id);
+      if (delErr) {
+        setSaving(false);
+        toast.error("Marken-Speicherung fehlgeschlagen: " + delErr.message);
+        return;
+      }
+
+      if (validBrands.length > 0) {
+        const { error: insErr } = await supabase
+          .from("dealer_brands")
+          .insert(validBrands.map((b) => ({ dealer_id: user.id, brand: b })));
+        if (insErr) {
+          setSaving(false);
+          toast.error("Marken-Speicherung fehlgeschlagen: " + insErr.message);
+          return;
+        }
+      }
+    }
 
     setSaving(false);
-
-    if (error) {
-      toast.error("Fehler beim Speichern: " + error.message);
-    } else {
-      toast.success("Profil erfolgreich gespeichert!");
-    }
+    toast.success("Profil erfolgreich gespeichert!");
   };
 
   const addBrand = (brand: string) => {

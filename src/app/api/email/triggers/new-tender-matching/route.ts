@@ -34,7 +34,16 @@ type TenderVehicleRow = {
 type DealerCandidate = {
   id: string;
   first_name: string | null;
-  brands: string[] | null;
+  matchedBrands: string[];
+};
+
+type DealerBrandJoinRow = {
+  brand: string;
+  dealer_id: string;
+  profiles: {
+    id: string;
+    first_name: string | null;
+  } | null;
 };
 
 function uniq<T>(values: T[]): T[] {
@@ -106,31 +115,44 @@ export async function POST(request: Request) {
     );
   }
 
-  // 2. Find candidate dealers whose `brands` array overlaps with tender brands.
-  //
-  // PostgREST exposes the `&&` array-overlap operator via the `ov` filter.
-  // We additionally filter on role, active flag, and email_status — the
-  // per-type opt-out (`notification_settings.new_tender_matching`) is checked
-  // individually per dealer via shouldSendNotification(), since JSONB nested
-  // filters via PostgREST are awkward.
-  const { data: candidatesRaw, error: candidatesErr } = await admin
-    .from('profiles')
-    .select('id, first_name, brands')
-    .eq('role', 'anbieter')
-    .eq('is_active', true)
-    .eq('email_status', 'ok')
-    .eq('email_notifications', true)
-    .overlaps('brands', tenderBrands);
+  // 2. Find candidate dealers via dealer_brands join. Each matching brand
+  // produces one row; we group by dealer afterwards. Per-type opt-out is
+  // still checked individually via shouldSendNotification().
+  const { data: matchRowsRaw, error: matchErr } = await admin
+    .from('dealer_brands')
+    .select(
+      'brand, dealer_id, profiles!inner(id, first_name, role, is_active, email_status, email_notifications)',
+    )
+    .in('brand', tenderBrands)
+    .eq('profiles.role', 'anbieter')
+    .eq('profiles.is_active', true)
+    .eq('profiles.email_status', 'ok')
+    .eq('profiles.email_notifications', true);
 
-  if (candidatesErr) {
+  if (matchErr) {
     console.error(
       '[email/triggers/new-tender-matching] candidates lookup failed:',
-      candidatesErr,
+      matchErr,
     );
     return NextResponse.json({ error: 'Candidate lookup failed' }, { status: 500 });
   }
 
-  const candidates = (candidatesRaw ?? []) as DealerCandidate[];
+  const matchRows = (matchRowsRaw ?? []) as unknown as DealerBrandJoinRow[];
+  const dealerMap = new Map<string, DealerCandidate>();
+  for (const row of matchRows) {
+    if (!row.profiles) continue;
+    const existing = dealerMap.get(row.dealer_id);
+    if (existing) {
+      existing.matchedBrands.push(row.brand);
+    } else {
+      dealerMap.set(row.dealer_id, {
+        id: row.profiles.id,
+        first_name: row.profiles.first_name,
+        matchedBrands: [row.brand],
+      });
+    }
+  }
+  const candidates = Array.from(dealerMap.values());
 
   // 3. Filter out dealers who skip the buyer themselves (shouldn't match anyway)
   //    and apply per-type opt-out check.
@@ -159,8 +181,7 @@ export async function POST(request: Request) {
   let failed = 0;
 
   for (const dealer of eligibleDealers) {
-    const dealerBrands = dealer.brands ?? [];
-    const matchedBrands = tenderBrands.filter((b) => dealerBrands.includes(b));
+    const matchedBrands = dealer.matchedBrands;
     const matchedVehicles = vehicles
       .filter((v) => v.brand && matchedBrands.includes(v.brand))
       .map((v) => ({
