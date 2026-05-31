@@ -16,6 +16,7 @@ import {
 import {
   Loader2, Save, User, Building2, X, PartyPopper,
   Inbox, MessageCircle, Star, FileText, Zap, InboxIcon, Activity,
+  Bell, ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
@@ -404,6 +405,26 @@ export default function ProfilePage() {
             </div>
           </div>
         )}
+        {/* Quick-Link: Benachrichtigungen */}
+        <Link
+          href="/dashboard/profil/benachrichtigungen"
+          className="group flex items-center gap-4 bg-white rounded-3xl border border-slate-200 shadow-sm px-6 py-5 hover:border-blue-300 hover:shadow-md transition-all"
+        >
+          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
+            <Bell size={20} className="text-blue-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-navy-950">Benachrichtigungen</div>
+            <p className="text-sm text-slate-500 mt-0.5">
+              E-Mail-Einstellungen und Newsletter verwalten.
+            </p>
+          </div>
+          <ChevronRight
+            size={20}
+            className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0"
+          />
+        </Link>
+
         {/* Section 1: Persönliche Daten */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-8 py-6 border-b border-slate-100 flex items-center gap-3">
