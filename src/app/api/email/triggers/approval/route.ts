@@ -78,8 +78,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.profleet.de';
-  const loginUrl = `${siteUrl.replace(/\/$/, '')}/anmelden`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.profleet.de';
+  const loginUrl = `${appUrl.replace(/\/$/, '')}/anmelden`;
 
   const result = await sendEmail({
     to: userData.user.email,

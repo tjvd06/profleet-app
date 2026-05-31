@@ -148,10 +148,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.profleet.de'
+  const appUrl = (
+    process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.profleet.de'
   ).replace(/\/$/, '');
-  const tenderUrl = `${siteUrl}/dashboard/ausschreibungen/${tender.id}`;
+  const tenderUrl = `${appUrl}/dashboard/ausschreibungen/${tender.id}`;
 
   // 4. Send mails. Sequential to keep error attribution easy — for a Beta
   //    that matches a handful of dealers per tender this is fast enough.
@@ -186,7 +186,7 @@ export async function POST(request: Request) {
       userId: dealer.id,
       type: 'new_tender_matching',
     });
-    const unsubscribeUrl = `${siteUrl}/unsubscribe?token=${encodeURIComponent(
+    const unsubscribeUrl = `${appUrl}/unsubscribe?token=${encodeURIComponent(
       unsubscribeToken,
     )}`;
 

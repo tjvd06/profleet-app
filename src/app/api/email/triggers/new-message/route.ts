@@ -146,17 +146,17 @@ export async function POST(request: Request) {
     ? displayName(senderProfileRes.data)
     : 'Ein Nutzer von proFleet';
 
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.profleet.de'
+  const appUrl = (
+    process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.profleet.de'
   ).replace(/\/$/, '');
-  const conversationUrl = `${siteUrl}/dashboard/nachrichten?contact=${contact.id}`;
+  const conversationUrl = `${appUrl}/dashboard/nachrichten?contact=${contact.id}`;
   const messagePreview = truncate(message.content, PREVIEW_MAX_CHARS);
 
   const unsubscribeToken = await signUnsubscribeToken({
     userId: recipientId,
     type: 'new_message',
   });
-  const unsubscribeUrl = `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
+  const unsubscribeUrl = `${appUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
 
   const result = await sendEmail({
     to: recipientEmail,

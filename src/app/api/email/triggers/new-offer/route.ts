@@ -173,16 +173,16 @@ export async function POST(request: Request) {
 
   const totalPriceFormatted = formatPriceEUR(offer.total_price);
 
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.profleet.de'
+  const appUrl = (
+    process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.profleet.de'
   ).replace(/\/$/, '');
-  const offerUrl = `${siteUrl}/dashboard/eingang/${tender.id}/angebot`;
+  const offerUrl = `${appUrl}/dashboard/eingang/${tender.id}/angebot`;
 
   const unsubscribeToken = await signUnsubscribeToken({
     userId: buyerId,
     type: 'new_offer',
   });
-  const unsubscribeUrl = `${siteUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
+  const unsubscribeUrl = `${appUrl}/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
 
   const result = await sendEmail({
     to: buyerEmail,
