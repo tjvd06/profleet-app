@@ -36,8 +36,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# supabase
-supabase/migrations/
+# supabase config (managed via Dashboard, not in repo)
+supabase/
 
-# claude code
+# documentation and runbooks (kept local only)
+*.md
+docs/
+
+# claude code / AI agent instructions
 .claude/
+CLAUDE.md
+AGENTS.md
