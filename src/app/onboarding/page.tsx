@@ -9,14 +9,18 @@ import { Logo } from "@/components/ui/Logo";
 import {
   ArrowLeft,
   ArrowRight,
+  Check,
   CheckCircle2,
   ClipboardList,
+  Crown,
   Gauge,
   Handshake,
   Inbox,
   Loader2,
+  Rocket,
   Search,
   Send,
+  Sparkles,
   Target,
   Users,
   X,
@@ -26,6 +30,7 @@ import {
   DEALER_TYPES,
   DEALER_TYPE_LABELS,
   type DealerType,
+  type SubscriptionTier,
   type UserRole,
 } from "@/constants/enums";
 
@@ -101,6 +106,7 @@ type Form = {
   industry: string;
   dealer_type: string;
   brands: string[];
+  subscription_tier: SubscriptionTier;
 };
 
 const EMPTY_FORM: Form = {
@@ -116,16 +122,79 @@ const EMPTY_FORM: Form = {
   industry: "",
   dealer_type: "",
   brands: [],
+  subscription_tier: "starter",
 };
 
-const STEPS = ["Willkommen", "Persönlich", "Unternehmen", "Fertig"] as const;
+type StepKey = "welcome" | "personal" | "company" | "tariff" | "finish";
+
+const STEP_LABELS: Record<StepKey, string> = {
+  welcome: "Willkommen",
+  personal: "Persönlich",
+  company: "Unternehmen",
+  tariff: "Tarif",
+  finish: "Fertig",
+};
+
+function stepsForRole(role: UserRole): StepKey[] {
+  return role === "anbieter"
+    ? ["welcome", "personal", "company", "tariff", "finish"]
+    : ["welcome", "personal", "company", "finish"];
+}
+
+type TariffInfo = {
+  id: SubscriptionTier;
+  name: string;
+  price: string;
+  tagline: string;
+  perks: string[];
+  recommended?: boolean;
+};
+
+const TARIFFS: TariffInfo[] = [
+  {
+    id: "starter",
+    name: "Starter",
+    price: "Kostenlos",
+    tagline: "Plattform testen, keine Kreditkarte.",
+    perks: [
+      "3 Angebote pro Monat",
+      "1 aktives Sofort-Angebot",
+      "Grundprofil sichtbar",
+    ],
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: "99 € / Monat",
+    tagline: "Für aktiv vertreibende Händler.",
+    recommended: true,
+    perks: [
+      "Unbegrenzt Angebote",
+      "10 aktive Sofort-Angebote",
+      "E-Mail-Benachrichtigungen",
+      "Statistik-Dashboard",
+    ],
+  },
+  {
+    id: "premium",
+    name: "Premium",
+    price: "249 € / Monat",
+    tagline: "Maximale Sichtbarkeit und Support.",
+    perks: [
+      "Unbegrenzt alles",
+      "Bevorzugte Platzierung",
+      "Erweiterte Statistiken",
+      "Persönlicher Support",
+    ],
+  },
+];
 
 export default function OnboardingPage() {
   const { user, profile, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [supabase] = useState(() => createClient());
 
-  const [step, setStep] = useState(0);
+  const [stepIdx, setStepIdx] = useState(0);
   const [form, setForm] = useState<Form>(EMPTY_FORM);
   const [availableBrands, setAvailableBrands] = useState<string[]>([]);
   const [brandInput, setBrandInput] = useState("");
@@ -134,6 +203,10 @@ export default function OnboardingPage() {
 
   const role: UserRole = profile?.role ?? "nachfrager";
   const isAnbieter = role === "anbieter";
+  const steps = useMemo(() => stepsForRole(role), [role]);
+  const currentKey = steps[stepIdx];
+  const isLastDataStep =
+    currentKey === (isAnbieter ? "tariff" : "company");
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -159,6 +232,8 @@ export default function OnboardingPage() {
           industry: p.industry || "",
           dealer_type: p.dealer_type || "",
           brands: [],
+          subscription_tier:
+            (p.subscription_tier as SubscriptionTier) || "starter",
         });
       }
 
@@ -206,7 +281,7 @@ export default function OnboardingPage() {
     return null;
   };
 
-  const validateStep3 = (): string | null => {
+  const validateCompany = (): string | null => {
     if (!form.company_name.trim()) return "Bitte geben Sie Ihren Firmennamen an.";
     if (!form.street.trim()) return "Bitte geben Sie die Straße an.";
     if (!form.zip.trim()) return "Bitte geben Sie die PLZ an.";
@@ -216,9 +291,6 @@ export default function OnboardingPage() {
     }
     if (isAnbieter && !form.dealer_type) {
       return "Bitte wählen Sie einen Händler-Typ aus.";
-    }
-    if (isAnbieter && form.brands.length === 0) {
-      return "Bitte wählen Sie mindestens eine vertretene Marke aus.";
     }
     return null;
   };
@@ -242,6 +314,7 @@ export default function OnboardingPage() {
 
     if (isAnbieter) {
       payload.dealer_type = form.dealer_type || null;
+      payload.subscription_tier = form.subscription_tier;
     } else {
       payload.industry = form.industry || null;
     }
@@ -291,25 +364,37 @@ export default function OnboardingPage() {
   };
 
   const handleNext = async () => {
-    if (step === 1) {
+    if (currentKey === "personal") {
       const err = validateStep2();
       if (err) return toast.error(err);
-      setStep(2);
+      setStepIdx((s) => s + 1);
       return;
     }
 
-    if (step === 2) {
-      const err = validateStep3();
+    if (currentKey === "company") {
+      const err = validateCompany();
       if (err) return toast.error(err);
-      const ok = await submitProfile();
-      if (ok) setStep(3);
+      // For Nachfrager, company is the last data step → submit and finish.
+      // For Anbieter, tariff step comes next; just advance.
+      if (!isAnbieter) {
+        const ok = await submitProfile();
+        if (ok) setStepIdx((s) => s + 1);
+      } else {
+        setStepIdx((s) => s + 1);
+      }
       return;
     }
 
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    if (currentKey === "tariff") {
+      const ok = await submitProfile();
+      if (ok) setStepIdx((s) => s + 1);
+      return;
+    }
+
+    setStepIdx((s) => Math.min(s + 1, steps.length - 1));
   };
 
-  const handleBack = () => setStep((s) => Math.max(s - 1, 0));
+  const handleBack = () => setStepIdx((s) => Math.max(s - 1, 0));
 
   if (authLoading || loadingProfile) {
     return (
@@ -324,14 +409,16 @@ export default function OnboardingPage() {
 
   return (
     <GlassShell>
-      <Stepper step={step} />
+      <Stepper steps={steps} stepIdx={stepIdx} />
 
       <div className="px-8 md:px-12 pb-8 md:pb-10">
-        {step === 0 && <StepWelcome role={role} firstName={form.first_name} />}
-        {step === 1 && (
+        {currentKey === "welcome" && (
+          <StepWelcome role={role} firstName={form.first_name} />
+        )}
+        {currentKey === "personal" && (
           <StepPersonal form={form} update={update} />
         )}
-        {step === 2 && (
+        {currentKey === "company" && (
           <StepCompany
             form={form}
             update={update}
@@ -344,11 +431,17 @@ export default function OnboardingPage() {
             removeBrand={removeBrand}
           />
         )}
-        {step === 3 && <StepFinish role={role} router={router} />}
+        {currentKey === "tariff" && (
+          <StepTariff
+            selected={form.subscription_tier}
+            onSelect={(tier) => update({ subscription_tier: tier })}
+          />
+        )}
+        {currentKey === "finish" && <StepFinish role={role} router={router} />}
 
-        {step !== 3 && (
+        {currentKey !== "finish" && (
           <div className="flex items-center justify-between mt-10 pt-6 border-t border-white/10">
-            {step > 0 ? (
+            {stepIdx > 0 ? (
               <button
                 type="button"
                 onClick={handleBack}
@@ -370,7 +463,7 @@ export default function OnboardingPage() {
                 <Loader2 size={16} className="animate-spin" />
               ) : (
                 <>
-                  {step === 2 ? "Profil speichern" : "Weiter"}
+                  {isLastDataStep ? "Profil speichern" : "Weiter"}
                   <ArrowRight size={16} />
                 </>
               )}
@@ -452,15 +545,15 @@ function GlassShell({
 
 // ─── Stepper ───────────────────────────────────────────────────────────────
 
-function Stepper({ step }: { step: number }) {
+function Stepper({ steps, stepIdx }: { steps: StepKey[]; stepIdx: number }) {
   return (
     <div className="px-8 md:px-12 pt-8 md:pt-10 pb-6">
       <div className="flex items-center justify-center gap-3">
-        {STEPS.map((label, idx) => {
-          const isActive = idx === step;
-          const isDone = idx < step;
+        {steps.map((key, idx) => {
+          const isActive = idx === stepIdx;
+          const isDone = idx < stepIdx;
           return (
-            <div key={label} className="flex items-center gap-2">
+            <div key={key} className="flex items-center gap-2">
               <div
                 className={`rounded-full transition-all duration-500 ${
                   isActive
@@ -473,7 +566,7 @@ function Stepper({ step }: { step: number }) {
               />
               {isActive && (
                 <span className="text-[11px] font-bold uppercase tracking-wider text-white">
-                  {label}
+                  {STEP_LABELS[key]}
                 </span>
               )}
             </div>
@@ -727,7 +820,7 @@ function StepCompany({
                   className="text-sm font-semibold text-white"
                 >
                   Vertretene Marken
-                  <span className="text-cyan-300 ml-1">*</span>
+                  <span className="text-white/40 ml-1 font-normal">(optional)</span>
                 </label>
                 <span className="text-xs text-white/50">
                   {form.brands.length} ausgewählt
@@ -828,7 +921,91 @@ function StepCompany({
   );
 }
 
-// ─── Step 4: Finish ────────────────────────────────────────────────────────
+// ─── Step Tariff (Anbieter only) ───────────────────────────────────────────
+
+function StepTariff({
+  selected,
+  onSelect,
+}: {
+  selected: SubscriptionTier;
+  onSelect: (tier: SubscriptionTier) => void;
+}) {
+  const tariffIcon = (id: SubscriptionTier) => {
+    if (id === "starter") return <Rocket size={18} />;
+    if (id === "pro") return <Sparkles size={18} />;
+    return <Crown size={18} />;
+  };
+
+  return (
+    <div className="py-2">
+      <h2 className="text-2xl font-bold tracking-tight">Welcher Tarif passt zu Ihnen?</h2>
+      <p className="text-sm text-white/65 mt-2 max-w-2xl">
+        Starten Sie kostenlos und wechseln Sie jederzeit. Pro und Premium werden separat abgerechnet, wir kontaktieren Sie nach Ihrer Auswahl.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+        {TARIFFS.map((tariff) => {
+          const isSelected = selected === tariff.id;
+          return (
+            <button
+              key={tariff.id}
+              type="button"
+              onClick={() => onSelect(tariff.id)}
+              className={`relative text-left rounded-2xl border p-5 transition-all ${
+                isSelected
+                  ? "border-cyan-300/70 bg-gradient-to-br from-blue-500/15 to-cyan-400/10 shadow-lg shadow-cyan-500/20"
+                  : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20"
+              }`}
+            >
+              {tariff.recommended && (
+                <span className="absolute -top-2.5 right-4 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-white bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full px-2.5 py-1 shadow-md">
+                  Empfohlen
+                </span>
+              )}
+              <div className="flex items-center gap-2.5 mb-3">
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
+                    isSelected
+                      ? "bg-gradient-to-br from-blue-500/40 to-cyan-400/40 border-white/20 text-cyan-100"
+                      : "bg-white/5 border-white/10 text-white/70"
+                  }`}
+                >
+                  {tariffIcon(tariff.id)}
+                </div>
+                <h3 className="text-base font-bold text-white">{tariff.name}</h3>
+              </div>
+              <p className="text-xl font-bold text-white">{tariff.price}</p>
+              <p className="text-xs text-white/55 mt-1 mb-4">{tariff.tagline}</p>
+              <ul className="space-y-1.5">
+                {tariff.perks.map((perk) => (
+                  <li
+                    key={perk}
+                    className="flex items-start gap-2 text-xs text-white/75"
+                  >
+                    <Check
+                      size={13}
+                      className={`mt-0.5 flex-shrink-0 ${
+                        isSelected ? "text-cyan-300" : "text-white/40"
+                      }`}
+                    />
+                    <span>{perk}</span>
+                  </li>
+                ))}
+              </ul>
+              {isSelected && (
+                <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-gradient-to-br from-blue-400 to-cyan-300 flex items-center justify-center shadow-md">
+                  <Check size={12} className="text-white" strokeWidth={3} />
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Step Finish ───────────────────────────────────────────────────────────
 
 function StepFinish({
   role,
