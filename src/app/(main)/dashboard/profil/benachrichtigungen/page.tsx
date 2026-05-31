@@ -3,10 +3,19 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Bell, Save } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loader2, Bell, Save, Megaphone } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
+import { NEWSLETTER_CONSENT_TEXT } from "@/lib/newsletter/consent";
 
 type NotificationKey =
   | "new_message"
@@ -69,6 +78,11 @@ const ANBIETER_ONLY: ToggleDef[] = [
   },
 ];
 
+type NewsletterState = {
+  subscribed: boolean;
+  consentAt: string | null;
+};
+
 export default function NotificationSettingsPage() {
   const { user, profile } = useAuth();
   const [supabase] = useState(() => createClient());
@@ -76,6 +90,13 @@ export default function NotificationSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [settings, setSettings] = useState<Record<NotificationKey, boolean>>(DEFAULT_TOGGLES);
+
+  const [newsletter, setNewsletter] = useState<NewsletterState>({
+    subscribed: false,
+    consentAt: null,
+  });
+  const [showConsentDialog, setShowConsentDialog] = useState(false);
+  const [newsletterBusy, setNewsletterBusy] = useState(false);
 
   const role = (profile?.role ?? "nachfrager") as "nachfrager" | "anbieter";
 
@@ -89,7 +110,9 @@ export default function NotificationSettingsPage() {
     (async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("email_notifications, notification_settings")
+        .select(
+          "email_notifications, notification_settings, newsletter_subscribed, newsletter_consent_at",
+        )
         .eq("id", user.id)
         .single();
 
@@ -107,6 +130,10 @@ export default function NotificationSettingsPage() {
         new_tender_matching: stored.new_tender_matching !== false,
         review_received: stored.review_received !== false,
         billing: stored.billing !== false,
+      });
+      setNewsletter({
+        subscribed: data.newsletter_subscribed ?? false,
+        consentAt: (data.newsletter_consent_at as string | null) ?? null,
       });
       setLoading(false);
     })();
@@ -129,6 +156,60 @@ export default function NotificationSettingsPage() {
       return;
     }
     toast.success("Benachrichtigungen aktualisiert");
+  };
+
+  const handleNewsletterToggle = (next: boolean) => {
+    if (next) {
+      setShowConsentDialog(true);
+    } else {
+      void handleUnsubscribe();
+    }
+  };
+
+  const handleSubscribeConfirmed = async () => {
+    setNewsletterBusy(true);
+    try {
+      const res = await fetch("/api/newsletter/subscribe", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Anmeldung fehlgeschlagen");
+        return;
+      }
+      if (data.alreadySubscribed) {
+        toast.success("Sie sind bereits angemeldet.");
+        setNewsletter({ subscribed: true, consentAt: new Date().toISOString() });
+      } else {
+        toast.success(
+          "Bestätigungs-E-Mail verschickt — bitte den Link darin anklicken, um die Anmeldung abzuschließen.",
+        );
+        setNewsletter((prev) => ({ ...prev, consentAt: new Date().toISOString() }));
+      }
+      setShowConsentDialog(false);
+    } catch (e) {
+      console.error("[newsletter] subscribe error", e);
+      toast.error("Verbindungsfehler. Bitte erneut versuchen.");
+    } finally {
+      setNewsletterBusy(false);
+    }
+  };
+
+  const handleUnsubscribe = async () => {
+    setNewsletterBusy(true);
+    try {
+      const res = await fetch("/api/newsletter/unsubscribe", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Abmeldung fehlgeschlagen");
+        return;
+      }
+      setNewsletter({ subscribed: false, consentAt: null });
+      toast.success("Newsletter abgemeldet.");
+    } catch (e) {
+      console.error("[newsletter] unsubscribe error", e);
+      toast.error("Verbindungsfehler. Bitte erneut versuchen.");
+    } finally {
+      setNewsletterBusy(false);
+    }
   };
 
   if (loading) {
@@ -203,6 +284,79 @@ export default function NotificationSettingsPage() {
           Einstellungen speichern
         </Button>
       </div>
+
+      <div className="mt-12 mb-4 flex items-center gap-3">
+        <Megaphone className="text-blue-500" size={22} />
+        <h2 className="text-2xl font-bold text-navy-950">Marketing</h2>
+      </div>
+
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-6 flex items-start justify-between gap-6">
+          <div className="flex-1">
+            <div className="font-semibold text-navy-950">proFleet-Newsletter</div>
+            <p className="text-sm text-slate-500 mt-1">
+              Maximal 1× pro Monat: Branchen-News, Produkt-Updates, Erfolgsgeschichten. Jederzeit
+              widerrufbar — über den Abmelde-Link in jeder Newsletter-Mail oder hier per Toggle.
+            </p>
+            {newsletter.subscribed ? (
+              <p className="text-xs text-green-600 mt-2 font-medium">
+                ✓ Angemeldet{newsletter.consentAt
+                  ? ` (seit ${new Date(newsletter.consentAt).toLocaleDateString("de-DE")})`
+                  : ""}
+              </p>
+            ) : newsletter.consentAt ? (
+              <p className="text-xs text-amber-600 mt-2 font-medium">
+                Bestätigungs-E-Mail verschickt — bitte den Link in der Mail anklicken.
+              </p>
+            ) : null}
+          </div>
+          {newsletterBusy ? (
+            <Loader2 className="animate-spin text-blue-600 mt-1" size={20} />
+          ) : (
+            <Switch
+              checked={newsletter.subscribed}
+              onCheckedChange={handleNewsletterToggle}
+            />
+          )}
+        </div>
+      </div>
+
+      <Dialog open={showConsentDialog} onOpenChange={setShowConsentDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Newsletter-Anmeldung bestätigen</DialogTitle>
+            <DialogDescription>
+              Mit der Anmeldung erteilen Sie folgende Einwilligung:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-sm text-slate-600 leading-relaxed bg-slate-50 rounded-xl p-4 border border-slate-200">
+            {NEWSLETTER_CONSENT_TEXT}
+          </div>
+          <p className="text-xs text-slate-400">
+            Nach Klick auf „Einwilligen" senden wir Ihnen eine Bestätigungs-E-Mail. Erst nach
+            Klick auf den Link darin gilt die Anmeldung als abgeschlossen.
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowConsentDialog(false)}
+              disabled={newsletterBusy}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              onClick={handleSubscribeConfirmed}
+              disabled={newsletterBusy}
+              className="bg-navy-950 hover:bg-navy-900 text-white"
+            >
+              {newsletterBusy ? (
+                <Loader2 className="animate-spin mr-2" size={16} />
+              ) : null}
+              Einwilligen und Bestätigungs-Mail erhalten
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
