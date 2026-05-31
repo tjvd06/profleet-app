@@ -36,10 +36,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // 2. Verify the user has permission to access this file
-    //    - Owner of the file (path starts with user ID)
-    //    - Dealer who uploaded an offer file (offers/{dealer_id}/...)
-    //    - Buyer of the tender that this offer belongs to
+    // 2. Verify the user has permission to access this file.
+    //
+    //    Access paths in priority order:
+    //    a) Owner of the file (path starts with own user ID)
+    //    b) Buyer of the tender for an offer file (offers/{dealer_id}/{tender_id}/...)
+    //    c) Dealer with role='anbieter' for a tender config file from an ACTIVE
+    //       tender. Config-File-Pfad ist {buyer_id}/{vehicle_id}/{filename} und
+    //       liegt in tender_vehicles.config_file_path. Aktive Tender sind im
+    //       Marketplace eh public sichtbar, daher Download für jeden Dealer ok.
     const isOwnFile =
       filePath.startsWith(`${user.id}/`) ||
       filePath.startsWith(`offers/${user.id}/`);
@@ -58,6 +63,32 @@ export async function POST(request: Request) {
           .single();
 
         hasAccess = tender?.buyer_id === user.id;
+      }
+    }
+
+    if (!hasAccess && !filePath.startsWith("offers/")) {
+      // Path format: {buyer_id}/{vehicle_id}/{filename} — tender config file.
+      // Allowed for any active dealer; we verify role + tender.status='active'.
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.role === "anbieter") {
+        const parts = filePath.split("/");
+        const vehicleId = parts[1];
+
+        if (vehicleId) {
+          const { data: vehicle } = await supabase
+            .from("tender_vehicles")
+            .select("tenders!inner(status)")
+            .eq("id", vehicleId)
+            .single();
+
+          const tenderStatus = (vehicle?.tenders as { status?: string } | null)?.status;
+          hasAccess = tenderStatus === "active";
+        }
       }
     }
 
