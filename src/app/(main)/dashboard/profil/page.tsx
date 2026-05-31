@@ -16,13 +16,13 @@ import {
 import {
   Loader2, Save, User, Building2, X, PartyPopper,
   Inbox, MessageCircle, Star, FileText, Zap, InboxIcon, Activity,
-  Bell, ChevronRight,
+  Bell, ChevronRight, Tag, Search,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
-import { DEALER_TYPES, DEALER_TYPE_LABELS } from "@/constants/enums";
+import { DEALER_TYPES, DEALER_TYPE_LABELS, type DealerType } from "@/constants/enums";
 
 const DEALER_TYPE_OPTIONS = DEALER_TYPES.map((value) => ({
   value,
@@ -524,8 +524,8 @@ export default function ProfilePage() {
         </div>
 
         {/* Section 2: Unternehmensdaten */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-8 py-6 border-b border-slate-100 flex items-center gap-3">
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm">
+          <div className="px-8 py-6 border-b border-slate-100 flex items-center gap-3 rounded-t-3xl">
             <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
               <Building2 size={20} className="text-emerald-600" />
             </div>
@@ -608,15 +608,29 @@ export default function ProfilePage() {
             {/* Dealer-specific fields */}
             {isAnbieter && (
               <>
-                <div className="pt-4 border-t border-slate-100">
-                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Händler-Angaben</h3>
+                <div className="pt-6 mt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                      <Tag size={16} className="text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-navy-950">Händler-Angaben</h3>
+                      <p className="text-xs text-slate-500">Typ und vertretene Marken</p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="dealer_type">Händlertyp</Label>
                   <Select value={form.dealer_type ?? ""} onValueChange={(v) => update({ dealer_type: v ?? "" })}>
                     <SelectTrigger id="dealer_type" className="h-12 bg-slate-50 border-slate-200 rounded-xl px-4">
-                      <SelectValue placeholder="Händlertyp auswählen" />
+                      <SelectValue placeholder="Händlertyp auswählen">
+                        {(value) =>
+                          value && DEALER_TYPE_LABELS[value as DealerType]
+                            ? DEALER_TYPE_LABELS[value as DealerType]
+                            : "Händlertyp auswählen"
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {DEALER_TYPE_OPTIONS.map((dt) => (
@@ -627,19 +641,26 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Vertretene Marken</Label>
+                  <div className="flex items-baseline justify-between">
+                    <Label>Vertretene Marken</Label>
+                    <span className="text-xs text-slate-400">
+                      {form.brands.length} ausgewählt
+                    </span>
+                  </div>
+
                   {form.brands.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-2">
+                    <div className="flex flex-wrap gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
                       {form.brands.map((brand) => (
                         <Badge
                           key={brand}
-                          className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 text-sm font-semibold flex items-center gap-1.5"
+                          className="bg-white text-navy-950 border border-slate-200 px-3 py-1.5 text-sm font-medium flex items-center gap-1.5 shadow-sm hover:border-blue-300 transition-colors"
                         >
                           {brand}
                           <button
                             type="button"
                             onClick={() => removeBrand(brand)}
-                            className="text-blue-400 hover:text-blue-700 transition-colors"
+                            aria-label={`${brand} entfernen`}
+                            className="text-slate-400 hover:text-red-500 transition-colors"
                           >
                             <X size={14} />
                           </button>
@@ -647,9 +668,14 @@ export default function ProfilePage() {
                       ))}
                     </div>
                   )}
+
                   <div className="relative">
+                    <Search
+                      size={16}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                    />
                     <Input
-                      placeholder="Marke eingeben oder auswählen…"
+                      placeholder="Marke suchen und hinzufügen…"
                       value={brandInput}
                       onChange={(e) => setBrandInput(e.target.value)}
                       onKeyDown={(e) => {
@@ -658,23 +684,40 @@ export default function ProfilePage() {
                           if (filteredBrands.length > 0) addBrand(filteredBrands[0]);
                         }
                       }}
-                      className={inputClass}
+                      className={`${inputClass} pl-11`}
                     />
-                    {brandInput && filteredBrands.length > 0 && (
-                      <div className="absolute z-20 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                        {filteredBrands.slice(0, 10).map((brand) => (
-                          <button
-                            key={brand}
-                            type="button"
-                            onClick={() => addBrand(brand)}
-                            className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-                          >
-                            {brand}
-                          </button>
-                        ))}
+                    {brandInput && (
+                      <div className="absolute z-30 top-full mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto">
+                        {filteredBrands.length > 0 ? (
+                          filteredBrands.slice(0, 10).map((brand, idx) => (
+                            <button
+                              key={brand}
+                              type="button"
+                              onClick={() => addBrand(brand)}
+                              className={`w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors ${
+                                idx === 0 ? "bg-blue-50/40" : ""
+                              }`}
+                            >
+                              {brand}
+                              {idx === 0 && (
+                                <span className="ml-2 text-[10px] uppercase tracking-wider text-blue-500 font-semibold">
+                                  Enter
+                                </span>
+                              )}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-sm text-slate-400 italic">
+                            Keine passende Marke gefunden.
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
+                  <p className="text-xs text-slate-400">
+                    Sie erhalten E-Mail-Benachrichtigungen für neue Ausschreibungen,
+                    die zu Ihren Marken passen.
+                  </p>
                 </div>
               </>
             )}
