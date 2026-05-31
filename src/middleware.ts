@@ -36,8 +36,8 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
-  // Not logged in → redirect all /dashboard/* to /anmelden
-  if (!user && pathname.startsWith('/dashboard')) {
+  // Not logged in → redirect all /dashboard/* and /onboarding to /anmelden
+  if (!user && (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding'))) {
     const url = request.nextUrl.clone()
     url.pathname = '/anmelden'
     return NextResponse.redirect(url)
@@ -48,6 +48,30 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
+  }
+
+  // Onboarding gate: profile_completed must be true to access /dashboard,
+  // and once completed the /onboarding route is no longer reachable.
+  if (user && (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding'))) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('profile_completed')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const completed = profile?.profile_completed === true
+
+    if (!completed && pathname.startsWith('/dashboard')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding'
+      return NextResponse.redirect(url)
+    }
+
+    if (completed && pathname.startsWith('/onboarding')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse
