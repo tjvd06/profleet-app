@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -753,7 +754,7 @@ export default function OfferCreationPage({ params }: { params: { id: string } }
                         <Label className="font-semibold text-navy-950 block mb-1">Tageszulassung</Label>
                         {currentForm.dayRegistration && (
                           <div className="grid grid-cols-2 gap-3 mt-3">
-                            <div><Label className="text-xs text-slate-600">Datum</Label><Input type="date" value={currentForm.dayRegistrationDate} onChange={(e) => updateForm({ dayRegistrationDate: e.target.value })} className="rounded-xl h-10" /></div>
+                            <div><Label className="text-xs text-slate-600">Datum</Label><DatePicker value={currentForm.dayRegistrationDate} onChange={(v) => updateForm({ dayRegistrationDate: v })} className="h-10" /></div>
                             <div><Label className="text-xs text-slate-600">km-Stand</Label><Input type="number" value={currentForm.dayRegistrationKm} onChange={(e) => updateForm({ dayRegistrationKm: e.target.value })} className="rounded-xl h-10" placeholder="z.B. 50" /></div>
                           </div>
                         )}
@@ -914,7 +915,9 @@ export default function OfferCreationPage({ params }: { params: { id: string } }
                 </div>
                 <div>
                   <Label className="text-sm font-semibold text-slate-700">Liefertermin</Label>
-                  <Input type="date" value={currentForm.deliveryDate} onChange={(e) => updateForm({ deliveryDate: e.target.value })} className="rounded-xl h-11 bg-slate-50 mt-1" />
+                  <div className="mt-1">
+                    <DatePicker value={currentForm.deliveryDate} onChange={(v) => updateForm({ deliveryDate: v })} fromToday className="h-11" />
+                  </div>
                 </div>
               </div>
               <p className="text-xs text-slate-400 mt-3">Gewünschter Auslieferungsort des Nachfragers: {tender.delivery_plz || "—"} {tender.delivery_city || ""}</p>

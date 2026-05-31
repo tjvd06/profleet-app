@@ -7,6 +7,7 @@ import { InstantOfferCard } from "@/components/tenders/InstantOfferCard";
 import { MultiSelectDropdown } from "@/components/ui-custom/MultiSelectDropdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -1363,11 +1364,12 @@ export function InstantOfferMarketplace() {
             </div>
             <div>
               <label className="text-sm font-medium text-slate-600 mb-1 block">Lieferbar bis</label>
-              <Input
-                type="date"
+              <DatePicker
                 value={draft.deliveryBefore}
-                onChange={(e) => setDraft((d) => ({ ...d, deliveryBefore: e.target.value }))}
-                className="h-10 rounded-xl border-slate-200"
+                onChange={(v) => setDraft((d) => ({ ...d, deliveryBefore: v }))}
+                placeholder="Datum wählen"
+                clearable
+                className="h-10"
               />
             </div>
           </div>
