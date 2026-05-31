@@ -17,7 +17,6 @@ import {
   Loader2,
   Search,
   Send,
-  Sparkles,
   Target,
   Users,
   X,
@@ -314,7 +313,7 @@ export default function OnboardingPage() {
 
   if (authLoading || loadingProfile) {
     return (
-      <GlassShell role={role}>
+      <GlassShell>
         <div className="flex items-center justify-center py-24 text-white/70">
           <Loader2 className="animate-spin mr-3" size={24} />
           <span className="text-base font-medium">Onboarding wird geladen…</span>
@@ -324,7 +323,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <GlassShell role={role}>
+    <GlassShell>
       <Stepper step={step} />
 
       <div className="px-8 md:px-12 pb-8 md:pb-10">
@@ -386,13 +385,10 @@ export default function OnboardingPage() {
 // ─── GlassShell ────────────────────────────────────────────────────────────
 
 function GlassShell({
-  role,
   children,
 }: {
-  role: UserRole;
   children: React.ReactNode;
 }) {
-  const roleLabel = role === "anbieter" ? "Händler-Konto" : "Nachfrager-Konto";
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-slate-950 text-white">
       {/* Multi-color radial gradient orbs */}
@@ -422,7 +418,7 @@ function GlassShell({
       <div className="relative z-10 min-h-screen w-full flex items-center justify-center p-4 md:p-8">
         <div className="w-full max-w-3xl">
           {/* Header above card */}
-          <div className="flex items-center justify-between mb-5 px-2">
+          <div className="flex items-center justify-center mb-5 px-2">
             <Link
               href="/"
               className="inline-flex items-center gap-2 text-white"
@@ -432,10 +428,6 @@ function GlassShell({
                 proFleet
               </span>
             </Link>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white/70 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full px-3 py-1.5">
-              <Sparkles size={12} className="text-cyan-300" />
-              {roleLabel}
-            </span>
           </div>
 
           {/* Glass card */}
